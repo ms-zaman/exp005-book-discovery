@@ -259,7 +259,13 @@
                     body:JSON.stringify({batch:q})})
       .then(function(r){ if(r.ok){ var cur=queue(); save(cur.slice(q.length)); } })
       .catch(function(){ /* keep the queue; retry next load */ })
-      .finally(function(){ sending=false; });
+      .finally(function(){
+        sending=false;
+        // Events recorded WHILE a send was in flight are still queued: the completed send only cleared the
+        // items it started with. Without this re-trigger they sat until the next page load. Found by the
+        // production smoke test on 2026-09-05 (queue went 3 -> 4 instead of draining to 0).
+        if(queue().length) setTimeout(flush, 400);
+      });
   }
 
   if(location.hash==='#exp005-export'){
